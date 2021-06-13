@@ -70,7 +70,7 @@ class HeartRateMonitor:
 
 class FanSpeedController:
     def __init__(self, pin_low, pin_med, pin_high):
-        self.led = Pin(2, Pin.Out)
+        self.led = Pin(2, Pin.OUT)
         self.pin_low = Pin(pin_low, Pin.OUT)
         self.pin_med = Pin(pin_med, Pin.OUT)
         self.pin_high = Pin(pin_high, Pin.OUT)
