@@ -19,6 +19,8 @@
 
 #include "BLEDevice.h"
 
+#define _DEBUG
+
 // Set to true to define Relay as Normally Open (NO)
 #define RELAY_NO true
 
@@ -53,9 +55,13 @@ static boolean doConnect = false;
 static boolean connected = false;
 static double disconnectedTime = 0.0;
 #ifdef _DEBUG
-static double disconnectedDelay = 10000.0;
+// Delay switching to a lower speed or turning the fan off
+// to compensate for the lag between the heart rate and how how you feel.
+// Also to prevent the fan from turning off abruptly in the middle of the workout
+// if BT loses the connection for a moment.
+static double fanDelay = 10000.0;     // 10 seconds
 #else
-static double disconnectedDelay = 60000.0;
+static double fanDelay = 60000.0 * 2; // 2 minutes
 #endif
 
 static boolean notification = false;
@@ -131,7 +137,7 @@ class HRMClientCallback : public BLEClientCallbacks {
 
       // Record the time when the HRM disconnected, then
       // stop the fan in the loop() if the HRM doesn't
-      // re-connect within disconnectedDelay milliseconds
+      // re-connect within fanDelay milliseconds
       disconnectedTime = millis();
       connected = false;
       Serial.println(" - HRM disconnected, start the timer");
@@ -199,12 +205,12 @@ class HRMAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     */
     void onResult(BLEAdvertisedDevice advertisedDevice)
     {
+      Serial.print("BLE Advertised Device found: ");
+      Serial.println(advertisedDevice.toString().c_str());
+
       // We have found a device, let us now see if it contains the service we are looking for.
       if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
       {
-        Serial.print("BLE Advertised Device found: ");
-        Serial.println(advertisedDevice.toString().c_str());
-
         BLEDevice::getScan()->stop();
         myDevice = new BLEAdvertisedDevice(advertisedDevice);
         doConnect = true;
@@ -243,7 +249,7 @@ void setup() {
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  pBLEScan->start(5);
+  doScan = true;
 }
 
 void loop() {
@@ -273,7 +279,7 @@ void loop() {
   if(!connected && currentSpeed > 0)
   {
     double currentTime = millis();
-    if ((currentTime - disconnectedTime) > disconnectedDelay)
+    if ((currentTime - disconnectedTime) > fanDelay)
     {
       // It's been long enough, giving up on HRM reconnecting and turning off the fan
       Serial.println(" - HRM failed to re-connect, bail and turn off the fan");
