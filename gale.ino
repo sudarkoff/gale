@@ -3,14 +3,11 @@
  * Lots of code borrowed from https://github.com/agrabbs/hrm_fan_control
  * Modifications by George Sudarkoff <george@sudarkoff.com>
  * 
- * - Re-implement HR zones, do not turn on the fan until HR is above the first threshold
- *   (this is handy if you're using a Whoop strap, for example, and just happen to be in the
- *   vicinity of the fan, but not working out.
- * - Add hysteresis to delay lowering the speed when HR falls below the threshold, this
- *   somewhat debounces the HR readings and also compensates for the delay between the HR
- *   falling and how hot the body feels.
- * - Delay turning the fan off by a minute after HRM disconnects, to prevent the fan turning off
- *   because of temporary BLE connection hiccups.
+ * - Re-implement HR zones, do not turn on the fan until HR is above the first threshold (this
+ *   is handy if you're using a Whoop strap, for example, and just happen to be in the vicinity 
+ *   of the fan, but not working out.
+ * - Delay lowering the speed of the fan when HR goes down, giving the body a chance to cool down.
+ * - Delay turning off the fan when HRM disconnects to ignore temporary BLE connection hiccups.
  * - Light-up the built-in LED to indicate when the HRM is connected
  * - TODO: pulse the LED when the fan is on.
  * - FIX: "lld_pdu_get_tx_flush_nb HCI packet count mismatch (0, 1)" that happens somewhere
@@ -19,10 +16,17 @@
 
 #include "BLEDevice.h"
 
-#define _DEBUG
+//#define _DEBUG
+#define RELAY_NO
 
-// Set to true to define Relay as Normally Open (NO)
-#define RELAY_NO true
+// RELAY_NO -> Normally Open Relay
+#ifdef RELAY_NO
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+#else
+#define RELAY_ON HIGH
+#define RELAY_OFF LOW
+#endif
 
 // Heart Rate Zones
 #ifdef _DEBUG
@@ -38,7 +42,7 @@
 // Hysteresis (delay lowering the fan speed when the HR is falling)
 // This both "debounces" the HR readings AND accounts for the lag between
 // the HR rate and how hot your body feels.
-#define HR_HYSTERESIS 10
+#define HR_HYSTERESIS 0
 
 // Number of relays to control the fan speed
 #define NUM_RELAYS 3
@@ -54,6 +58,8 @@ static BLEUUID charUUID(BLEUUID((uint16_t)0x2A37));
 static boolean doConnect = false;
 static boolean connected = false;
 static double disconnectedTime = 0.0;
+static double speedChangedTime = 0.0;
+
 #ifdef _DEBUG
 // Delay switching to a lower speed or turning the fan off
 // to compensate for the lag between the heart rate and how how you feel.
@@ -97,6 +103,7 @@ static void calculateFanSpeed(
   {
     currentSpeed = 0;
     printHRandFanSpeed(pData[1], 0, currentSpeed);
+    speedChangedTime = millis();
   }
   // ZONE 1
   else if ((currentSpeed < 1 && pData[1] >= ZONE_1 && pData[1] < ZONE_2) ||
@@ -105,6 +112,7 @@ static void calculateFanSpeed(
   {
     currentSpeed = 1;
     printHRandFanSpeed(pData[1], 1, currentSpeed);
+    speedChangedTime = millis();
   }
   // ZONE 2
   else if ((currentSpeed < 2 && pData[1] >= ZONE_2 && pData[1] < ZONE_3) ||
@@ -113,12 +121,14 @@ static void calculateFanSpeed(
   {
     currentSpeed = 2;
     printHRandFanSpeed(pData[1], 2, currentSpeed);
+    speedChangedTime = millis();
   }
   // ZONE 3
   else if (currentSpeed < 3 && pData[1] >= ZONE_3)
   {
     currentSpeed = 3;
     printHRandFanSpeed(pData[1], 3, currentSpeed);
+    speedChangedTime = millis();
   }
 }
 
@@ -219,6 +229,24 @@ class HRMAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     }
 };
 
+uint8_t setFanSpeed(uint8_t fanSpeed)
+{
+  if (fanSpeed == prevSpeed) return prevSpeed;
+
+  double currentTime = millis();
+  if ((fanSpeed > prevSpeed) || (currentTime - speedChangedTime) > fanDelay)
+  {
+    Serial.print(" - Set the fan speed to ");
+    Serial.println(fanSpeed, DEC);
+    for (int i = 0; i < NUM_RELAYS; ++i)
+    {
+      digitalWrite(relayGPIO[i], i == fanSpeed-1 ? RELAY_ON : RELAY_OFF);
+    }
+
+    return fanSpeed;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting Gale...");
@@ -228,14 +256,7 @@ void setup() {
   for (int i = 0; i < NUM_RELAYS; ++i)
   {
     pinMode(relayGPIO[i], OUTPUT);
-    if (RELAY_NO)
-    {
-      digitalWrite(relayGPIO[i], HIGH);
-    }
-    else
-    {
-      digitalWrite(relayGPIO[i], LOW);
-    }
+    digitalWrite(relayGPIO[i], RELAY_OFF);
   }
 
   // initialize digital pin LED_BUILTIN as an output for BT Connected status.
@@ -275,6 +296,12 @@ void loop() {
     notification = true;
   }
 
+  // Reconnect
+  if (!connected && doScan)
+  {
+    pBLEScan->start(1);
+  }
+
   // The fan is on, but we're no longer connected to HRM
   if(!connected && currentSpeed > 0)
   {
@@ -287,20 +314,5 @@ void loop() {
     }
   }
 
-  if (!connected && doScan)
-  {
-    pBLEScan->start(1);
-  }
-
-  // Change the fan speed if needed
-  if (currentSpeed != prevSpeed)
-  {
-    Serial.print(" - Set the fan speed to ");
-    Serial.println(currentSpeed, DEC);
-    for (int i = 0; i < NUM_RELAYS; ++i)
-    {
-      digitalWrite(relayGPIO[i], i == currentSpeed-1 ? LOW : HIGH);
-    }
-    prevSpeed = currentSpeed;
-  }
+  prevSpeed = setFanSpeed(currentSpeed);
 }
