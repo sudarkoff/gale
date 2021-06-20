@@ -42,7 +42,7 @@
 // Hysteresis (delay lowering the fan speed when the HR is falling)
 // This both "debounces" the HR readings AND accounts for the lag between
 // the HR rate and how hot your body feels.
-#define HR_HYSTERESIS 0
+#define HR_HYSTERESIS 10
 
 // Number of relays to control the fan speed
 #define NUM_RELAYS 3
