@@ -39,11 +39,6 @@
 #define ZONE_3 165
 #endif
 
-// Hysteresis (delay lowering the fan speed when the HR is falling)
-// This both "debounces" the HR readings AND accounts for the lag between
-// the HR rate and how hot your body feels.
-#define HR_HYSTERESIS 10
-
 // Number of relays to control the fan speed
 #define NUM_RELAYS 3
 
@@ -66,8 +61,13 @@ static double speedChangedTime = 0.0;
 // Also to prevent the fan from turning off abruptly in the middle of the workout
 // if BT loses the connection for a moment.
 static double fanDelay = 10000.0;     // 10 seconds
+// Hysteresis (delay lowering the fan speed when the HR is falling)
+// This both "debounces" the HR readings AND accounts for the lag between
+// the HR rate and how hot your body feels.
+static uint8_t hrHysteresis=0;       // No hysteresis in debug mode
 #else
 static double fanDelay = 60000.0 * 2; // 2 minutes
+static uint8_t hrHysteresis=10;      // 10 BPM
 #endif
 
 static boolean notification = false;
@@ -99,36 +99,36 @@ static void calculateFanSpeed(
   if (pData[1] == 0) return;
   
   // ZONE 0 -> FAN OFF
-  if (pData[1] < ZONE_1 - HR_HYSTERESIS)
+  if (currentSpeed > 0 && pData[1] < ZONE_1 - hrHysteresis)
   {
     currentSpeed = 0;
-    printHRandFanSpeed(pData[1], 0, currentSpeed);
     speedChangedTime = millis();
+    printHRandFanSpeed(pData[1], 0, currentSpeed);
   }
   // ZONE 1
   else if ((currentSpeed < 1 && pData[1] >= ZONE_1 && pData[1] < ZONE_2) ||
-           (currentSpeed > 1 && pData[1] < ZONE_2 - HR_HYSTERESIS)
+           (currentSpeed > 1 && pData[1] < ZONE_2 - hrHysteresis)
           )
   {
     currentSpeed = 1;
-    printHRandFanSpeed(pData[1], 1, currentSpeed);
     speedChangedTime = millis();
+    printHRandFanSpeed(pData[1], 1, currentSpeed);
   }
   // ZONE 2
   else if ((currentSpeed < 2 && pData[1] >= ZONE_2 && pData[1] < ZONE_3) ||
-           (currentSpeed > 2 && pData[1] < ZONE_3 - HR_HYSTERESIS)
+           (currentSpeed > 2 && pData[1] < ZONE_3 - hrHysteresis)
           )
   {
     currentSpeed = 2;
-    printHRandFanSpeed(pData[1], 2, currentSpeed);
     speedChangedTime = millis();
+    printHRandFanSpeed(pData[1], 2, currentSpeed);
   }
   // ZONE 3
   else if (currentSpeed < 3 && pData[1] >= ZONE_3)
   {
     currentSpeed = 3;
-    printHRandFanSpeed(pData[1], 3, currentSpeed);
     speedChangedTime = millis();
+    printHRandFanSpeed(pData[1], 3, currentSpeed);
   }
 }
 
