@@ -83,9 +83,11 @@ void printHRandFanSpeed(uint8_t hr, uint8_t zone, int8_t speed)
   Serial.print(" - HR: ");
   Serial.print(hr, DEC);
   Serial.print(" bpm");
-  Serial.print(", ZONE ");
+  Serial.print(", HR ZONE: ");
   Serial.print(zone, DEC);
-  Serial.print(", FAN SPEED: ");
+  Serial.print(", PREV FAN SPEED: ");
+  Serial.print(prevSpeed, DEC);
+  Serial.print(", NEW FAN SPEED: ");
   Serial.println(speed, DEC);
 }
 
@@ -229,11 +231,13 @@ class HRMAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     }
 };
 
-uint8_t setFanSpeed(uint8_t fanSpeed)
+void setFanSpeed(uint8_t fanSpeed)
 {
-  if (fanSpeed == prevSpeed) return prevSpeed;
+  if (fanSpeed == prevSpeed) return;
 
   double currentTime = millis();
+  // If the speed is going up—change it right away
+  // or wait fanDelay ms before lowering it
   if ((fanSpeed > prevSpeed) || (currentTime - speedChangedTime) > fanDelay)
   {
     Serial.print(" - Set the fan speed to ");
@@ -242,8 +246,7 @@ uint8_t setFanSpeed(uint8_t fanSpeed)
     {
       digitalWrite(relayGPIO[i], i == fanSpeed-1 ? RELAY_ON : RELAY_OFF);
     }
-
-    return fanSpeed;
+    prevSpeed = fanSpeed;
   }
 }
 
@@ -314,5 +317,5 @@ void loop() {
     }
   }
 
-  prevSpeed = setFanSpeed(currentSpeed);
+  setFanSpeed(currentSpeed);
 }
