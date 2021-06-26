@@ -30,11 +30,11 @@
 
 // Heart Rate Zones
 #ifdef _DEBUG
-#define ZONE_1 70
-#define ZONE_2 80
-#define ZONE_3 90
+#define ZONE_1 10
+#define ZONE_2 70
+#define ZONE_3 80
 #else
-#define ZONE_1 90
+#define ZONE_1 10
 #define ZONE_2 135
 #define ZONE_3 165
 #endif
@@ -64,10 +64,10 @@ static double fanDelay = 10000.0;     // 10 seconds
 // Hysteresis (delay lowering the fan speed when the HR is falling)
 // This both "debounces" the HR readings AND accounts for the lag between
 // the HR rate and how hot your body feels.
-static uint8_t hrHysteresis=0;       // No hysteresis in debug mode
+static uint8_t hrHysteresis=0;        // No hysteresis in debug mode
 #else
 static double fanDelay = 60000.0 * 2; // 2 minutes
-static uint8_t hrHysteresis=10;      // 10 BPM
+static uint8_t hrHysteresis=15;       // 10 BPM
 #endif
 
 static boolean notification = false;
@@ -101,7 +101,7 @@ static void calculateFanSpeed(
   if (pData[1] == 0) return;
   
   // ZONE 0 -> FAN OFF
-  if (currentSpeed > 0 && pData[1] < ZONE_1 - hrHysteresis)
+  if (currentSpeed > 0 && pData[1] < ZONE_1)
   {
     currentSpeed = 0;
     speedChangedTime = millis();
