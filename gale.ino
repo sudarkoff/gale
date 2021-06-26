@@ -1,17 +1,11 @@
 /**
- * Control a 3-speed fan with heart rate.
+ * Control a 3-speed fan with a heart rate monitor.
  * Lots of code borrowed from https://github.com/agrabbs/hrm_fan_control
- * Modifications by George Sudarkoff <george@sudarkoff.com>
  * 
- * - Re-implement HR zones, do not turn on the fan until HR is above the first threshold (this
- *   is handy if you're using a Whoop strap, for example, and just happen to be in the vicinity 
- *   of the fan, but not working out.
- * - Delay lowering the speed of the fan when HR goes down, giving the body a chance to cool down.
- * - Delay turning off the fan when HRM disconnects to ignore temporary BLE connection hiccups.
+ * Modifications by George Sudarkoff <george@sudarkoff.com>:
+ * 
+ * - Re-implement how the HR to Speed is calculated (implement hysteresis and timed delay)
  * - Light-up the built-in LED to indicate when the HRM is connected
- * - TODO: pulse the LED when the fan is on.
- * - FIX: "lld_pdu_get_tx_flush_nb HCI packet count mismatch (0, 1)" that happens somewhere
- *   after "Created client" and before "Connected to server"
 */
 
 #include "BLEDevice.h"
