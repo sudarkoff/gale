@@ -29,8 +29,8 @@
 #define ZONE_3 80
 #else
 #define ZONE_1 10
-#define ZONE_2 135
-#define ZONE_3 165
+#define ZONE_2 125
+#define ZONE_3 150
 #endif
 
 // Number of relays to control the fan speed
