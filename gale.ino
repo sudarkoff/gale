@@ -23,14 +23,20 @@
 #endif
 
 // Heart Rate Zones
-#ifdef _DEBUG
+#ifndef _DEBUG
+// TODO: Make HRM and RHR user-configurable
+#define HRM 194
+#define RHR 50
+// 30% of HR Reserve (Max HR - Resting HR)
+#define ZONE_1 (RHR + 0.3 * (HRM - RHR)) // ~90 BPM
+// 70% of Max HR
+#define ZONE_2 (0.7 * HRM)               // ~135 BPM
+// 80% of Max HR
+#define ZONE_3 (0.8 * HRM)               // ~155 BPM
+#else
 #define ZONE_1 10
 #define ZONE_2 70
 #define ZONE_3 80
-#else
-#define ZONE_1 10
-#define ZONE_2 125
-#define ZONE_3 150
 #endif
 
 // Number of relays to control the fan speed
@@ -49,19 +55,19 @@ static boolean connected = false;
 static double disconnectedTime = 0.0;
 static double speedChangedTime = 0.0;
 
-#ifdef _DEBUG
+#ifndef _DEBUG
 // Delay switching to a lower speed or turning the fan off
 // to compensate for the lag between the heart rate and how how you feel.
 // Also to prevent the fan from turning off abruptly in the middle of the workout
 // if BT loses the connection for a moment.
-static double fanDelay = 10000.0;     // 10 seconds
+static double fanDelay = 60000.0 * 2; // 2 minutes
 // Hysteresis (delay lowering the fan speed when the HR is falling)
 // This both "debounces" the HR readings AND accounts for the lag between
 // the HR rate and how hot your body feels.
-static uint8_t hrHysteresis=0;        // No hysteresis in debug mode
-#else
-static double fanDelay = 60000.0 * 2; // 2 minutes
 static uint8_t hrHysteresis=15;       // 10 BPM
+#else
+static double fanDelay = 10000.0;     // 10 seconds
+static uint8_t hrHysteresis=0;        // No hysteresis in debug mode
 #endif
 
 static boolean notification = false;
