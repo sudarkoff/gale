@@ -26,13 +26,10 @@
 #ifndef _DEBUG
 // TODO: Make HRM and RHR user-configurable
 #define HRM 194
-#define RHR 50
-// 30% of HR Reserve (Max HR - Resting HR)
-#define ZONE_1 (RHR + 0.3 * (HRM - RHR)) // ~90 BPM
-// 70% of Max HR
-#define ZONE_2 (0.7 * HRM)               // ~135 BPM
-// 80% of Max HR
-#define ZONE_3 (0.8 * HRM)               // ~155 BPM
+#define RHR 40
+#define ZONE_1 (RHR + 0.4 * (HRM - RHR)) // 40% of HR Reserve (Max - Resting): ~100 BPM
+#define ZONE_2 (0.7 * HRM)               // 70% of Max HR: ~135 BPM
+#define ZONE_3 (0.8 * HRM)               // 80% of Max HR: ~155 BPM
 #else
 #define ZONE_1 10
 #define ZONE_2 70
