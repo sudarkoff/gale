@@ -12,6 +12,7 @@
 
 //#define _DEBUG
 #define RELAY_NO
+#define ALWAYS_ON 1
 
 // RELAY_NO -> Normally Open Relay
 #ifdef RELAY_NO
@@ -22,21 +23,13 @@
 #define RELAY_OFF LOW
 #endif
 
-// Heart Rate Zones
-#ifndef _DEBUG
-// TODO: Make HRM and RHR user-configurable
-#define HRM 190                    // Max Heart Rate
-#define RHR 40                     // Resting Heart Rate
-#define HRR (HRM - RHR)            // HR Reserve (range between resting and max HR)
-
-#define ZONE_1 (RHR + 0.4 * HRR)   // 40% of HR Reserve (Whoop's threshold for "stress")
-#define ZONE_2 (RHR + 0.6 * HRR)   // 60% of HR Reserve
-#define ZONE_3 (RHR + 0.75 * HRR)  // 75% of HR Reserve
-#else
-#define ZONE_1 10
-#define ZONE_2 70
-#define ZONE_3 80
-#endif
+// Fan Speed Zones (NB! These are NOT heart rate zones)
+// TODO: Make HRM and RHR user-configurable, these are my numbers
+#define HRM 190                          // HR Max
+#define RHR 40                           // Resting HR
+#define ZONE_1 (RHR + 0.4 * (HRM - RHR)) // 40% of HR Reserve (Max - Resting)
+#define ZONE_2 (0.7 * HRM)               // 70% of Max HR
+#define ZONE_3 (0.8 * HRM)               // 80% of Max HR
 
 // Number of relays to control the fan speed
 #define NUM_RELAYS 3
@@ -56,14 +49,14 @@ static double speedChangedTime = 0.0;
 
 #ifndef _DEBUG
 // Delay switching to a lower speed or turning the fan off
-// to compensate for the lag between the heart rate and how how you feel.
+// to compensate for the lag between the heart rate and how hot you feel.
 // Also to prevent the fan from turning off abruptly in the middle of the workout
 // if BT loses the connection for a moment.
 static double fanDelay = 60000.0 * 2; // 2 minutes
 // Hysteresis (delay lowering the fan speed when the HR is falling)
 // This both "debounces" the HR readings AND accounts for the lag between
 // the HR rate and how hot your body feels.
-static uint8_t hrHysteresis=15;       // 10 BPM
+static uint8_t hrHysteresis=15;       // BPM
 #else
 static double fanDelay = 10000.0;     // 10 seconds
 static uint8_t hrHysteresis=0;        // No hysteresis in debug mode
@@ -72,7 +65,7 @@ static uint8_t hrHysteresis=0;        // No hysteresis in debug mode
 static boolean notification = false;
 static boolean doScan = false;
 static uint8_t prevSpeed = 0;
-static uint8_t currentSpeed = 0;
+static uint8_t currentSpeed = ALWAYS_ON;      // ALWAYS_ON=1: fan is always on; 0: turn fan off when HR below ZONE_1
 static BLEScan* pBLEScan;
 static BLERemoteCharacteristic* pRemoteCharacteristic;
 static BLEAdvertisedDevice* myDevice;
@@ -102,7 +95,7 @@ static void calculateFanSpeed(
   // ZONE 0 -> FAN OFF
   if (currentSpeed > 0 && pData[1] < ZONE_1)
   {
-    currentSpeed = 0;
+    currentSpeed = ALWAYS_ON; // ALWAYS_ON=1: keep the fan always on, 0: turn fan off when below ZONE_1
     speedChangedTime = millis();
     printHRandFanSpeed(pData[1], 0, currentSpeed);
   }
@@ -311,8 +304,8 @@ void loop() {
     if ((currentTime - disconnectedTime) > fanDelay)
     {
       // It's been long enough, giving up on HRM reconnecting and turning off the fan
-      Serial.println(" - HRM failed to re-connect, bail and turn off the fan");
-      currentSpeed = 0;
+      Serial.println(" - HRM failed to re-connect");
+      currentSpeed = ALWAYS_ON; // 1: keep the fan always on, 0: turn the fan off when HRM disconnects
     }
   }
 
