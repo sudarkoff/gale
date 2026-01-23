@@ -1,0 +1,76 @@
+menu "Gale Configuration"
+
+    config DEBUG_MODE
+        bool "Enable debug mode"
+        default n
+        help
+            Enable debug mode with shorter fan delays and no hysteresis.
+
+    config DEFAULT_WIFI_SSID
+        string "Default WiFi SSID"
+        default ""
+        help
+            Default WiFi SSID to connect to in station mode.
+            Leave empty to start in AP mode.
+
+    config DEFAULT_WIFI_PASSWORD
+        string "Default WiFi Password"
+        default ""
+        help
+            Default WiFi password for station mode.
+
+    config DEFAULT_AP_SSID
+        string "Default AP SSID"
+        default "Gale"
+        help
+            SSID for Access Point mode.
+
+    config DEFAULT_AP_PASSWORD
+        string "Default AP Password"
+        default "gale1234"
+        help
+            Password for Access Point mode. Minimum 8 characters.
+
+    config DEFAULT_HR_MAX
+        int "Default Maximum Heart Rate"
+        range 100 250
+        default 200
+        help
+            Default maximum heart rate in BPM.
+
+    config DEFAULT_HR_RESTING
+        int "Default Resting Heart Rate"
+        range 30 100
+        default 50
+        help
+            Default resting heart rate in BPM.
+
+    config RELAY_GPIO_1
+        int "Relay 1 GPIO Pin"
+        range 0 39
+        default 25
+        help
+            GPIO pin for relay 1 (fan speed 1).
+
+    config RELAY_GPIO_2
+        int "Relay 2 GPIO Pin"
+        range 0 39
+        default 26
+        help
+            GPIO pin for relay 2 (fan speed 2).
+
+    config RELAY_GPIO_3
+        int "Relay 3 GPIO Pin"
+        range 0 39
+        default 27
+        help
+            GPIO pin for relay 3 (fan speed 3).
+
+    config STATUS_LED_GPIO
+        int "Status LED GPIO Pin"
+        range 0 39
+        default 2
+        help
+            GPIO pin for status LED (indicates BLE connection).
+
+endmenu
