@@ -42,26 +42,6 @@ void nvs_config_load(void)
         return;
     }
 
-    // WiFi settings
-    size_t size;
-
-    size = sizeof(g_config.wifiSSID);
-    nvs_get_str(nvs_handle, "wifiSSID", g_config.wifiSSID, &size);
-
-    size = sizeof(g_config.wifiPassword);
-    nvs_get_str(nvs_handle, "wifiPass", g_config.wifiPassword, &size);
-
-    size = sizeof(g_config.apSSID);
-    nvs_get_str(nvs_handle, "apSSID", g_config.apSSID, &size);
-
-    size = sizeof(g_config.apPassword);
-    nvs_get_str(nvs_handle, "apPass", g_config.apPassword, &size);
-
-    uint8_t useStation = 0;
-    if (nvs_get_u8(nvs_handle, "useStation", &useStation) == ESP_OK) {
-        g_config.useStationMode = useStation;
-    }
-
     // Heart rate settings
     nvs_get_u8(nvs_handle, "hrMax", &g_config.hrMax);
     nvs_get_u8(nvs_handle, "hrRest", &g_config.hrResting);
@@ -84,7 +64,7 @@ void nvs_config_load(void)
     nvs_get_u8(nvs_handle, "hrHyst", &g_config.hrHysteresis);
 
     // GPIO pins
-    size = sizeof(g_config.relayGPIO);
+    size_t size = sizeof(g_config.relayGPIO);
     nvs_get_blob(nvs_handle, "gpios", g_config.relayGPIO, &size);
 
     nvs_close(nvs_handle);
@@ -106,13 +86,6 @@ void nvs_config_save(void)
         ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
         return;
     }
-
-    // WiFi settings
-    nvs_set_str(nvs_handle, "wifiSSID", g_config.wifiSSID);
-    nvs_set_str(nvs_handle, "wifiPass", g_config.wifiPassword);
-    nvs_set_str(nvs_handle, "apSSID", g_config.apSSID);
-    nvs_set_str(nvs_handle, "apPass", g_config.apPassword);
-    nvs_set_u8(nvs_handle, "useStation", g_config.useStationMode ? 1 : 0);
 
     // Heart rate settings
     nvs_set_u8(nvs_handle, "hrMax", g_config.hrMax);

@@ -9,7 +9,6 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "nvs_flash.h"
-#include "mdns.h"
 #include "gale.h"
 
 static const char *TAG = "WIFI_MGR";
@@ -146,22 +145,6 @@ static void wifi_init_ap(void)
     ESP_LOGI(TAG, "WiFi AP started. SSID: %s", g_config.apSSID);
 }
 
-static void start_mdns_service(void)
-{
-    esp_err_t err = mdns_init();
-    if (err) {
-        ESP_LOGE(TAG, "MDNS Init failed: %d", err);
-        return;
-    }
-
-    mdns_hostname_set("gale");
-    mdns_instance_name_set("Gale Heart Rate Fan Controller");
-
-    mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
-
-    ESP_LOGI(TAG, "mDNS responder started: gale.local");
-}
-
 void wifi_manager_init(void)
 {
     ESP_LOGI(TAG, "Initializing WiFi");
@@ -182,6 +165,4 @@ void wifi_manager_start(void)
     } else {
         wifi_init_ap();
     }
-
-    start_mdns_service();
 }

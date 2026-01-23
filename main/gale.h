@@ -17,14 +17,8 @@
 #endif
 
 // Configuration structure
+// These settings can be modified via NVS or later through Matter
 typedef struct {
-    // WiFi settings
-    char wifiSSID[32];
-    char wifiPassword[64];
-    char apSSID[32];
-    char apPassword[64];
-    bool useStationMode;
-
     // Heart rate settings
     uint8_t hrMax;
     uint8_t hrResting;
@@ -66,12 +60,6 @@ void calculate_zones(void);
 
 void ble_hrm_init(void);
 void ble_hrm_start_scan(void);
-
-void wifi_manager_init(void);
-void wifi_manager_start(void);
-
-void web_server_init(void);
-void web_server_start(void);
 
 void fan_control_init(void);
 void fan_control_set_speed(uint8_t speed);
