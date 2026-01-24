@@ -35,6 +35,7 @@ typedef struct {
 
     // GPIO pins
     uint8_t relayGPIO[NUM_RELAYS];
+    uint8_t ledGPIO;              // LED indicator for BLE connection
 } config_t;
 
 // Global configuration

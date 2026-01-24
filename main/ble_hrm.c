@@ -99,21 +99,41 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
     case ESP_GAP_BLE_SCAN_RESULT_EVT:
         if (param->scan_rst.search_evt == ESP_GAP_SEARCH_INQ_RES_EVT) {
-            // Check if device advertises Heart Rate Service
+            // Check if device advertises Heart Rate Service (0x180D)
             uint8_t *adv_data = param->scan_rst.ble_adv;
-            uint16_t adv_data_len = param->scan_rst.adv_data_len;
+            uint8_t adv_data_len = param->scan_rst.adv_data_len;
+            bool found_hrm = false;
 
-            for (int i = 0; i < adv_data_len; i++) {
-                if (i + 2 < adv_data_len &&
-                    adv_data[i+1] == ESP_BLE_AD_TYPE_16SRV_CMPL &&
-                    adv_data[i+2] == 0x0D && adv_data[i+3] == 0x18) {
+            // Parse BLE advertisement data (TLV format: length, type, data...)
+            int i = 0;
+            while (i < adv_data_len && !found_hrm) {
+                uint8_t len = adv_data[i];
+                if (len == 0 || i + len >= adv_data_len) break;
 
-                    ESP_LOGI(TAG, "Found HRM device");
-                    esp_ble_gap_stop_scanning();
-                    memcpy(remote_bda, param->scan_rst.bda, sizeof(esp_bd_addr_t));
-                    esp_ble_gattc_open(gattc_if, remote_bda, param->scan_rst.ble_addr_type, true);
-                    break;
+                uint8_t type = adv_data[i + 1];
+
+                // Check for 16-bit Service UUIDs (complete or incomplete list)
+                if (type == ESP_BLE_AD_TYPE_16SRV_CMPL || type == ESP_BLE_AD_TYPE_16SRV_PART) {
+                    // Scan through all UUIDs in the list (each UUID is 2 bytes)
+                    for (int j = i + 2; j + 1 <= i + len; j += 2) {
+                        uint16_t uuid = adv_data[j] | (adv_data[j + 1] << 8);
+                        if (uuid == 0x180D) {  // Heart Rate Service UUID
+                            found_hrm = true;
+                            break;
+                        }
+                    }
                 }
+                i += len + 1;  // Move to next TLV entry
+            }
+
+            if (found_hrm) {
+                ESP_LOGI(TAG, "Found HRM device: %02x:%02x:%02x:%02x:%02x:%02x",
+                         param->scan_rst.bda[0], param->scan_rst.bda[1],
+                         param->scan_rst.bda[2], param->scan_rst.bda[3],
+                         param->scan_rst.bda[4], param->scan_rst.bda[5]);
+                esp_ble_gap_stop_scanning();
+                memcpy(remote_bda, param->scan_rst.bda, sizeof(esp_bd_addr_t));
+                esp_ble_gattc_open(gattc_if, remote_bda, param->scan_rst.ble_addr_type, true);
             }
         }
         break;
@@ -159,7 +179,14 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
         conn_id = param->open.conn_id;
         is_connect = true;
         g_ble_connected = true;
-        gpio_set_level(GPIO_NUM_2, 1); // Turn on LED
+        gpio_set_level(g_config.ledGPIO, 1); // Turn on LED
+
+        // Turn on fan to low speed when HRM connects
+        if (g_current_speed == 0) {
+            g_current_speed = 1;
+            g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            ESP_LOGI(TAG, "HRM connected - fan set to low speed");
+        }
 
         // Start service discovery
         esp_ble_gattc_search_service(gattc_if, conn_id, &hrm_service_uuid);
@@ -171,7 +198,8 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
         get_server = false;
         g_ble_connected = false;
         g_disconnected_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        gpio_set_level(GPIO_NUM_2, 0); // Turn off LED
+        gpio_set_level(g_config.ledGPIO, 0); // Turn off LED
+        // Fan will turn off after fanDelay timeout in fan_control_task
 
         // Restart scanning
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -234,7 +262,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
                 // Find HRM characteristic
                 for (int i = 0; i < count; i++) {
                     if (char_elem_result[i].uuid.len == ESP_UUID_LEN_16 &&
-                        char_elem_result[i].uuid.uuid.uuid16 == 0x2A37) {
+                        char_elem_result[i].uuid.uuid.uuid16 == hrm_char_uuid.uuid.uuid16) {
                         hrm_char_handle = char_elem_result[i].char_handle;
                         ESP_LOGI(TAG, "Found HRM characteristic, handle %d", hrm_char_handle);
 
@@ -262,7 +290,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
                                     // Find notify descriptor
                                     for (int j = 0; j < descr_count; j++) {
                                         if (descr_elem_result[j].uuid.len == ESP_UUID_LEN_16 &&
-                                            descr_elem_result[j].uuid.uuid.uuid16 == 0x2902) {
+                                            descr_elem_result[j].uuid.uuid.uuid16 == notify_descr_uuid.uuid.uuid16) {
                                             notify_descr_handle = descr_elem_result[j].handle;
                                             ESP_LOGI(TAG, "Found notify descriptor, handle %d", notify_descr_handle);
 
@@ -311,7 +339,8 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
         get_server = false;
         g_ble_connected = false;
         g_disconnected_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        gpio_set_level(GPIO_NUM_2, 0); // Turn off LED
+        gpio_set_level(g_config.ledGPIO, 0); // Turn off LED
+        // Fan will turn off after fanDelay timeout in fan_control_task
 
         // Restart scanning after delay
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -327,15 +356,12 @@ void ble_hrm_init(void)
 {
     ESP_LOGI(TAG, "Initializing BLE HRM client");
 
-    // Initialize NVS for BLE
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
+    // Initialize LED GPIO
+    gpio_set_direction(g_config.ledGPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(g_config.ledGPIO, 0);  // Start with LED off
 
     // Release classic BT memory
+    esp_err_t ret;
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
