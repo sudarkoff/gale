@@ -61,6 +61,9 @@ void app_main(void)
     // Initialize fan control (GPIO setup)
     fan_control_init();
 
+    // Initialize LED control (PWM for pulsing)
+    led_control_init();
+
     // Set initial fan speed
     g_current_speed = g_config.alwaysOn;
 
@@ -69,6 +72,9 @@ void app_main(void)
 
     // Create fan control task
     xTaskCreate(fan_control_task, "fan_control", 4096, NULL, 5, NULL);
+
+    // Create LED control task
+    xTaskCreate(led_control_task, "led_control", 2048, NULL, 5, NULL);
 
     ESP_LOGI(TAG, "Gale initialized successfully");
     ESP_LOGI(TAG, "HR Max: %d, Resting: %d", g_config.hrMax, g_config.hrResting);

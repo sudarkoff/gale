@@ -18,11 +18,6 @@ void fan_control_init(void)
         gpio_set_level(g_config.relayGPIO[i], RELAY_OFF);
     }
 
-    // Configure LED pin
-    gpio_reset_pin(GPIO_NUM_2);
-    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_2, 0);
-
     ESP_LOGI(TAG, "Fan control initialized");
 }
 
@@ -43,6 +38,11 @@ void fan_control_set_speed(uint8_t fanSpeed)
         }
         g_prev_speed = fanSpeed;
         ESP_LOGI(TAG, "Fan speed set to %d", fanSpeed);
+
+        // Update LED pulsing mode (only if BLE connected)
+        if (g_ble_connected) {
+            led_control_set_mode(fanSpeed);
+        }
     }
 }
 

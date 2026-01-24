@@ -179,7 +179,6 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
         conn_id = param->open.conn_id;
         is_connect = true;
         g_ble_connected = true;
-        gpio_set_level(g_config.ledGPIO, 1); // Turn on LED
 
         // Turn on fan to low speed when HRM connects
         if (g_current_speed == 0) {
@@ -187,6 +186,9 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
             g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
             ESP_LOGI(TAG, "HRM connected - fan set to low speed");
         }
+
+        // Start LED pulsing at current speed
+        led_control_set_mode(g_current_speed);
 
         // Start service discovery
         esp_ble_gattc_search_service(gattc_if, conn_id, &hrm_service_uuid);
@@ -198,7 +200,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
         get_server = false;
         g_ble_connected = false;
         g_disconnected_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        gpio_set_level(g_config.ledGPIO, 0); // Turn off LED
+        led_control_off();  // Turn off LED immediately
         // Fan will turn off after fanDelay timeout in fan_control_task
 
         // Restart scanning
@@ -339,7 +341,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
         get_server = false;
         g_ble_connected = false;
         g_disconnected_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        gpio_set_level(g_config.ledGPIO, 0); // Turn off LED
+        led_control_off();  // Turn off LED immediately
         // Fan will turn off after fanDelay timeout in fan_control_task
 
         // Restart scanning after delay
@@ -355,10 +357,6 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if_loca
 void ble_hrm_init(void)
 {
     ESP_LOGI(TAG, "Initializing BLE HRM client");
-
-    // Initialize LED GPIO
-    gpio_set_direction(g_config.ledGPIO, GPIO_MODE_OUTPUT);
-    gpio_set_level(g_config.ledGPIO, 0);  // Start with LED off
 
     // Release classic BT memory
     esp_err_t ret;

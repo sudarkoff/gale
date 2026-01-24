@@ -66,4 +66,10 @@ void fan_control_init(void);
 void fan_control_set_speed(uint8_t speed);
 void fan_control_task(void *pvParameters);
 
+void led_control_init(void);
+void led_control_off(void);
+void led_control_on(void);
+void led_control_set_mode(uint8_t mode);  // 0=off, 1/2/3=pulse speeds
+void led_control_task(void *pvParameters);
+
 #endif // GALE_H
