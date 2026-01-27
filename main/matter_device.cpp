@@ -195,17 +195,30 @@ void matter_device_update_fan_state(uint8_t speed)
 
     uint8_t percent = speed_to_percent(speed);
 
-    // Update PercentCurrent attribute
-    esp_matter_attr_val_t val = esp_matter_nullable_uint8(percent);
+    // Update PercentCurrent attribute (non-nullable)
+    esp_matter_attr_val_t val = esp_matter_uint8(percent);
     attribute::update(fan_endpoint_id, FanControl::Id,
                      FanControl::Attributes::PercentCurrent::Id, &val);
 
-    // Update SpeedCurrent attribute
-    val = esp_matter_nullable_uint8(speed);
+    // Update SpeedCurrent attribute (non-nullable)
+    val = esp_matter_uint8(speed);
     attribute::update(fan_endpoint_id, FanControl::Id,
                      FanControl::Attributes::SpeedCurrent::Id, &val);
 
-    ESP_LOGD(TAG, "Matter state updated: speed=%d, percent=%d", speed, percent);
+    // Update FanMode to reflect current state
+    // If Matter is overriding, show the manual mode (0=Off, 1=Low, 2=Medium, 3=High)
+    // If HRM is controlling (auto mode), show Auto (5) when on, Off (0) when off
+    uint8_t fan_mode;
+    if (g_matter_override) {
+        fan_mode = speed;  // 0=Off, 1=Low, 2=Med, 3=High
+    } else {
+        fan_mode = (speed > 0) ? 5 : 0;  // Auto or Off
+    }
+    val = esp_matter_enum8(fan_mode);
+    attribute::update(fan_endpoint_id, FanControl::Id,
+                     FanControl::Attributes::FanMode::Id, &val);
+
+    ESP_LOGD(TAG, "Matter state updated: speed=%d, percent=%d, mode=%d", speed, percent, fan_mode);
 }
 
 bool matter_device_is_commissioned(void)
