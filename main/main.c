@@ -84,12 +84,16 @@ void app_main(void)
         return;
     }
 
+    // Wait for Matter BLE stack to stabilize before initializing HRM
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
     // Initialize BLE HRM client (NimBLE is already initialized by Matter)
     ble_hrm_init();
 
-    // If already commissioned, start HRM scanning immediately
+    // If already commissioned, start HRM scanning after a brief delay
     if (matter_device_is_commissioned()) {
         ESP_LOGI(TAG, "Already commissioned, starting HRM scan");
+        vTaskDelay(pdMS_TO_TICKS(1000));
         ble_hrm_start_scan();
     } else {
         ESP_LOGI(TAG, "Not commissioned, waiting for Matter commissioning...");
@@ -111,9 +115,11 @@ void app_main(void)
     // Main loop - check for commissioning completion and start HRM scan
     bool hrm_scan_started = matter_device_is_commissioned();
     while (1) {
-        // If just commissioned, start HRM scanning
+        // If just commissioned, start HRM scanning after BLE settles
         if (!hrm_scan_started && matter_device_is_commissioned()) {
-            ESP_LOGI(TAG, "Commissioning detected, starting HRM scan");
+            ESP_LOGI(TAG, "Commissioning detected, waiting for BLE to settle...");
+            vTaskDelay(pdMS_TO_TICKS(2000));
+            ESP_LOGI(TAG, "Starting HRM scan");
             ble_hrm_start_scan();
             hrm_scan_started = true;
         }
