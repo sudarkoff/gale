@@ -34,7 +34,7 @@ config_t g_config = {
 #endif
 
     // GPIO defaults
-    .relayGPIO = {25, 26, 27},
+    .relayGPIO = {27, 26, 25},
     .ledGPIO = 2
 };
 
