@@ -15,13 +15,13 @@ static const char *TAG = "GALE";
 // These can be modified via NVS or later through Matter
 config_t g_config = {
     // Heart rate defaults
-    .hrMax = 200,
-    .hrResting = 50,
+    .hrMax = 180,
+    .hrResting = 60,
 
     // Zone defaults
     .zone1Percent = 0.4f,  // 40% of HR reserve
-    .zone2Percent = 0.7f,  // 70% of max HR
-    .zone3Percent = 0.8f,  // 80% of max HR
+    .zone2Percent = 0.6f,  // 60% of max HR
+    .zone3Percent = 0.7f,  // 70% of max HR
 
     // Fan behavior defaults
     .alwaysOn = 0,  // Fan off by default, turns on when HRM connects
@@ -29,7 +29,7 @@ config_t g_config = {
     .fanDelay = 10000,     // 10 seconds in debug
     .hrHysteresis = 0,     // none in debug
 #else
-    .fanDelay = 120000,    // 2 minutes
+    .fanDelay = 60000,     // 1 minute
     .hrHysteresis = 15,
 #endif
 
