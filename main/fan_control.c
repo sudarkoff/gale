@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "gale.h"
+#include "matter_device.h"
 
 static const char *TAG = "FAN_CONTROL";
 
@@ -38,6 +39,9 @@ void fan_control_set_speed(uint8_t fanSpeed)
         }
         g_prev_speed = fanSpeed;
         ESP_LOGI(TAG, "Fan speed set to %d", fanSpeed);
+
+        // Update Matter state
+        matter_device_update_fan_state(fanSpeed);
 
         // Update LED pulsing mode (only if BLE connected)
         if (g_ble_connected) {

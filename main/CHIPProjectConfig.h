@@ -1,0 +1,15 @@
+#pragma once
+
+// Product identification
+#define CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID 0xFFF1  // Test vendor ID
+#define CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID 0x8001
+#define CHIP_DEVICE_CONFIG_DEFAULT_DEVICE_PRODUCT_NAME "Gale Fan"
+#define CHIP_DEVICE_CONFIG_DEFAULT_DEVICE_VENDOR_NAME "DIY"
+#define CHIP_DEVICE_CONFIG_DEVICE_TYPE 0x002B  // Fan device type
+
+// Commissioning settings (test values for development)
+#define CHIP_DEVICE_CONFIG_USE_TEST_SETUP_DISCRIMINATOR 0xF00  // 3840
+#define CHIP_DEVICE_CONFIG_USE_TEST_SETUP_PIN_CODE 20202021
+
+// Enable BLE for commissioning
+#define CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE 1
