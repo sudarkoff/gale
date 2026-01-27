@@ -24,7 +24,7 @@ config_t g_config = {
     .zone3Percent = 0.8f,  // 80% of max HR
 
     // Fan behavior defaults
-    .alwaysOn = 1,  // Fan off by default, turns on when HRM connects
+    .alwaysOn = 0,  // Fan off by default, turns on when HRM connects
 #ifdef CONFIG_DEBUG_MODE
     .fanDelay = 10000,     // 10 seconds in debug
     .hrHysteresis = 0,     // none in debug
