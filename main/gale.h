@@ -49,6 +49,9 @@ extern uint8_t g_current_speed;
 extern uint8_t g_prev_speed;
 extern uint32_t g_speed_changed_time;
 
+// Matter override mode (true = Matter controls fan, false = HRM auto mode)
+extern bool g_matter_override;
+
 // BLE connection state
 extern bool g_ble_connected;
 extern uint32_t g_disconnected_time;
@@ -64,6 +67,7 @@ void ble_hrm_start_scan(void);
 
 void fan_control_init(void);
 void fan_control_set_speed(uint8_t speed);
+void fan_control_set_speed_immediate(uint8_t speed);
 void fan_control_task(void *pvParameters);
 
 void led_control_init(void);

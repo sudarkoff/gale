@@ -37,6 +37,18 @@ static uint8_t percent_to_speed(uint8_t percent)
     return 3;
 }
 
+// Helper to apply Matter speed change immediately and set override mode
+static void apply_matter_speed(uint8_t new_speed, bool enable_override)
+{
+    g_matter_override = enable_override;
+    g_current_speed = new_speed;
+    fan_control_set_speed_immediate(new_speed);
+
+    if (!enable_override && g_ble_connected) {
+        ESP_LOGI(TAG, "Returning to HRM auto mode");
+    }
+}
+
 // Attribute update callback - called when Matter client changes attributes
 static esp_err_t app_attribute_update_cb(
     attribute::callback_type_t type,
@@ -55,30 +67,43 @@ static esp_err_t app_attribute_update_cb(
             uint8_t new_percent = val->val.u8;
             uint8_t new_speed = percent_to_speed(new_percent);
             ESP_LOGI(TAG, "Matter: Fan percent set to %d (speed %d)", new_percent, new_speed);
-            g_current_speed = new_speed;
-            g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            // Off (0%) returns to auto mode, otherwise override HRM
+            apply_matter_speed(new_speed, new_speed > 0);
         }
         else if (attribute_id == FanControl::Attributes::FanMode::Id) {
             uint8_t mode = val->val.u8;
             ESP_LOGI(TAG, "Matter: Fan mode set to %d", mode);
             // Map mode to speed: 0=Off, 1=Low, 2=Medium, 3=High, 4=On, 5=Auto
             switch (mode) {
-                case 0: g_current_speed = 0; break;  // Off
-                case 1: g_current_speed = 1; break;  // Low
-                case 2: g_current_speed = 2; break;  // Medium
-                case 3: g_current_speed = 3; break;  // High
-                case 4: g_current_speed = 1; break;  // On (default to low)
-                case 5: break;  // Auto - let HRM control it
-                default: break;
+                case 0:  // Off - return to auto mode
+                    apply_matter_speed(0, false);
+                    break;
+                case 1:  // Low
+                    apply_matter_speed(1, true);
+                    break;
+                case 2:  // Medium
+                    apply_matter_speed(2, true);
+                    break;
+                case 3:  // High
+                    apply_matter_speed(3, true);
+                    break;
+                case 4:  // On (default to low)
+                    apply_matter_speed(1, true);
+                    break;
+                case 5:  // Auto - let HRM control it
+                    g_matter_override = false;
+                    ESP_LOGI(TAG, "Returning to HRM auto mode");
+                    break;
+                default:
+                    break;
             }
-            g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
         }
         else if (attribute_id == FanControl::Attributes::SpeedSetting::Id) {
             uint8_t new_speed = val->val.u8;
             if (new_speed <= 3) {
                 ESP_LOGI(TAG, "Matter: Fan speed set to %d", new_speed);
-                g_current_speed = new_speed;
-                g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+                // Off (0) returns to auto mode, otherwise override HRM
+                apply_matter_speed(new_speed, new_speed > 0);
             }
         }
     }

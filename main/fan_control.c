@@ -22,6 +22,25 @@ void fan_control_init(void)
     ESP_LOGI(TAG, "Fan control initialized");
 }
 
+// Internal function to apply speed to relays
+static void apply_speed(uint8_t fanSpeed)
+{
+    for (int i = 0; i < NUM_RELAYS; i++) {
+        gpio_set_level(g_config.relayGPIO[i],
+                      (i == fanSpeed - 1) ? RELAY_ON : RELAY_OFF);
+    }
+    g_prev_speed = fanSpeed;
+    ESP_LOGI(TAG, "Fan speed set to %d", fanSpeed);
+
+    // Update Matter state
+    matter_device_update_fan_state(fanSpeed);
+
+    // Update LED pulsing mode (only if BLE connected)
+    if (g_ble_connected) {
+        led_control_set_mode(fanSpeed);
+    }
+}
+
 void fan_control_set_speed(uint8_t fanSpeed)
 {
     if (fanSpeed == g_prev_speed) {
@@ -33,21 +52,18 @@ void fan_control_set_speed(uint8_t fanSpeed)
     // If the speed is going up—change it right away
     // or wait fanDelay ms before lowering it
     if ((fanSpeed > g_prev_speed) || (currentTime - g_speed_changed_time) > g_config.fanDelay) {
-        for (int i = 0; i < NUM_RELAYS; i++) {
-            gpio_set_level(g_config.relayGPIO[i],
-                          (i == fanSpeed - 1) ? RELAY_ON : RELAY_OFF);
-        }
-        g_prev_speed = fanSpeed;
-        ESP_LOGI(TAG, "Fan speed set to %d", fanSpeed);
-
-        // Update Matter state
-        matter_device_update_fan_state(fanSpeed);
-
-        // Update LED pulsing mode (only if BLE connected)
-        if (g_ble_connected) {
-            led_control_set_mode(fanSpeed);
-        }
+        apply_speed(fanSpeed);
     }
+}
+
+// Set speed immediately, bypassing fanDelay (used for Matter control)
+void fan_control_set_speed_immediate(uint8_t fanSpeed)
+{
+    if (fanSpeed == g_prev_speed) {
+        return;
+    }
+    g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    apply_speed(fanSpeed);
 }
 
 void fan_control_task(void *pvParameters)
@@ -56,7 +72,8 @@ void fan_control_task(void *pvParameters)
 
     while (1) {
         // The fan is on, but we're no longer connected to HRM
-        if (!g_ble_connected && g_current_speed > 0) {
+        // Only auto-turn-off if Matter is not overriding
+        if (!g_ble_connected && g_current_speed > 0 && !g_matter_override) {
             uint32_t currentTime = xTaskGetTickCount() * portTICK_PERIOD_MS;
             if ((currentTime - g_disconnected_time) > g_config.fanDelay) {
                 // It's been long enough, giving up on HRM reconnecting and turning off the fan

@@ -40,6 +40,12 @@ static void calculate_fan_speed(uint8_t heart_rate)
 {
     if (heart_rate == 0) return;
 
+    // Skip if Matter is overriding HRM control
+    if (g_matter_override) {
+        ESP_LOGD(TAG, "Heart Rate: %d BPM (Matter override active, ignoring)", heart_rate);
+        return;
+    }
+
     uint8_t current_speed = g_current_speed;
 
     // ZONE 0 -> FAN OFF (or minimum speed if alwaysOn)
@@ -247,8 +253,8 @@ static int ble_hrm_gap_event(struct ble_gap_event *event, void *arg)
             hrm_chr_val_handle = 0;
             hrm_chr_cccd_handle = 0;
 
-            // Turn on fan to low speed when HRM connects
-            if (g_current_speed == 0) {
+            // Turn on fan to low speed when HRM connects (unless Matter is overriding)
+            if (g_current_speed == 0 && !g_matter_override) {
                 g_current_speed = 1;
                 g_speed_changed_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
                 ESP_LOGI(TAG, "HRM connected - fan set to low speed");

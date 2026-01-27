@@ -50,6 +50,9 @@ uint32_t g_speed_changed_time = 0;
 bool g_ble_connected = false;
 uint32_t g_disconnected_time = 0;
 
+// Matter override mode (true = Matter controls fan, false = HRM auto mode)
+bool g_matter_override = false;
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "Starting Gale - Heart Rate Controlled Fan with Matter");
