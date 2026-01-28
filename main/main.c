@@ -18,10 +18,18 @@ config_t g_config = {
     .hrMax = 180,
     .hrResting = 60,
 
-    // Zone defaults
-    .zone1Percent = 0.4f,  // 40% of HR reserve
-    .zone2Percent = 0.6f,  // 60% of max HR
-    .zone3Percent = 0.7f,  // 70% of max HR
+    // HR Zone defaults
+    // Turn-on threshold: 30-35% HRR marks transition from rest to light exercise where 
+    // metabolic heat production becomes noticeable. Below this, the body handles heat through 
+    // passive dissipation; above it, active cooling begins to help.
+    //
+    // Low speed: Remains in HRR calculation (personalized) for light to early-moderate intensity.
+    // Medium/High: Switch to %Max HR using ACSM guidelines - 64-76% Max HR is moderate intensity 
+    // (active sweating), 76%+ is vigorous (heavy heat production). These standardized zones align 
+    // fan speed with thermoregulatory demand as exercise intensity increases.
+    .zone1Percent = 0.33f, // %% of HR Reserve (light intensity, minimal heat production)
+    .zone2Percent = 0.64f, // %% of Max HR (moderate intensity, active sweating)
+    .zone3Percent = 0.76f, // %% of Max HR (vigorous intensity, heavy heat production)
 
     // Fan behavior defaults
     .alwaysOn = 0,  // Fan off by default, turns on when HRM connects
