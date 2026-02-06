@@ -64,9 +64,15 @@ static esp_err_t app_attribute_update_cb(
 
     if (cluster_id == FanControl::Id) {
         if (attribute_id == FanControl::Attributes::PercentSetting::Id) {
-            uint8_t new_percent = val->val.u8;
-            uint8_t new_speed = percent_to_speed(new_percent);
-            ESP_LOGI(TAG, "Matter: Fan percent set to %d (speed %d)", new_percent, new_speed);
+            uint8_t raw_percent = val->val.u8;
+            // Nullable uint8 uses 255 to represent null - treat as "no setting" (auto mode)
+            if (raw_percent == 255) {
+                ESP_LOGI(TAG, "Matter: Fan percent set to null (auto mode)");
+                g_matter_override = false;
+                return ESP_OK;
+            }
+            uint8_t new_speed = percent_to_speed(raw_percent);
+            ESP_LOGI(TAG, "Matter: Fan percent set to %d (speed %d)", raw_percent, new_speed);
             // Off (0%) returns to auto mode, otherwise override HRM
             apply_matter_speed(new_speed, new_speed > 0);
         }

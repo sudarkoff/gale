@@ -132,17 +132,22 @@ static int ble_hrm_on_chr_disc(uint16_t conn_handle,
         if (ble_uuid_cmp(&chr->uuid.u, &hrm_char_uuid.u) == 0) {
             hrm_chr_val_handle = chr->val_handle;
             ESP_LOGI(TAG, "Found HRM characteristic, handle=%d", hrm_chr_val_handle);
+
+            // Start CCCD discovery immediately - don't wait for BLE_HS_EDONE
+            // which may not fire reliably when Matter's BLE stack is active
+            ESP_LOGI(TAG, "Discovering CCCD descriptor");
+            int rc = ble_gattc_disc_all_dscs(conn_handle,
+                                    hrm_chr_val_handle,
+                                    hrm_chr_val_handle + 3,  // CCCD is typically at val_handle + 1
+                                    ble_hrm_on_dsc_disc, NULL);
+            if (rc != 0) {
+                ESP_LOGE(TAG, "Failed to start descriptor discovery, rc=%d", rc);
+            }
         }
     } else if (error->status == BLE_HS_EDONE) {
-        // Characteristic discovery complete
-        if (hrm_chr_val_handle != 0) {
-            // Now discover the CCCD descriptor
-            ESP_LOGI(TAG, "Discovering CCCD descriptor");
-            ble_gattc_disc_all_dscs(conn_handle,
-                                    hrm_chr_val_handle,
-                                    hrm_chr_val_handle + 10,  // Search a range
-                                    ble_hrm_on_dsc_disc, NULL);
-        }
+        ESP_LOGI(TAG, "Characteristic discovery complete");
+    } else if (error->status != 0) {
+        ESP_LOGE(TAG, "Characteristic discovery error, status=%d", error->status);
     }
     return 0;
 }
