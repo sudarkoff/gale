@@ -15,8 +15,8 @@ static const char *TAG = "GALE";
 // These can be modified via NVS or later through Matter
 config_t g_config = {
     // Heart rate defaults
-    .hrMax = 180,
-    .hrResting = 60,
+    .hrMax = 185,
+    .hrResting = 50,
 
     // HR Zone defaults
     // Turn-on threshold: 30-35% HRR marks transition from rest to light exercise where 
