@@ -49,12 +49,16 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
+static void wifi_common_init(void)
+{
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+}
+
 static bool wifi_init_sta(void)
 {
     s_wifi_event_group = xEventGroupCreate();
 
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -110,8 +114,6 @@ static bool wifi_init_sta(void)
 
 static void wifi_init_ap(void)
 {
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -152,9 +154,14 @@ void wifi_manager_init(void)
 
 void wifi_manager_start(void)
 {
+    wifi_common_init();
+
     if (g_config.useStationMode && strlen(g_config.wifiSSID) > 0) {
         if (!wifi_init_sta()) {
             ESP_LOGI(TAG, "Falling back to AP mode");
+            // Stop retry loop in event handler and let any in-flight events settle
+            s_retry_num = MAX_RETRY;
+            vTaskDelay(pdMS_TO_TICKS(100));
             // Clean up STA mode
             esp_wifi_stop();
             esp_wifi_deinit();
