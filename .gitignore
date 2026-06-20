@@ -21,3 +21,9 @@ __pycache__/
 
 # Dependencies
 managed_components/
+
+# Claude Code / agent worktrees + local settings
+.claude/
+
+# Codex build artifacts
+build-codex/

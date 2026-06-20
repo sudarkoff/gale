@@ -119,11 +119,8 @@ gale.ino
 main/
 ├── main.c           - Entry point (app_main)
 ├── ble_hrm.c        - BLE client (event-driven)
-├── wifi_manager.c   - WiFi management
-├── web_server.c     - HTTP server
 ├── nvs_config.c     - Configuration storage
-├── fan_control.c    - Fan control task
-└── ota_update.c     - OTA support
+└── fan_control.c    - Fan control task
 ```
 
 ## Feature Parity

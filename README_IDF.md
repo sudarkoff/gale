@@ -99,11 +99,8 @@ gale/
 │   ├── main.c                  # Application entry point
 │   ├── gale.h                  # Common header file
 │   ├── ble_hrm.c              # BLE heart rate monitor client
-│   ├── wifi_manager.c         # WiFi management (AP/STA modes)
-│   ├── web_server.c           # HTTP web server and API
 │   ├── nvs_config.c           # NVS configuration storage
-│   ├── fan_control.c          # Fan speed control logic
-│   └── ota_update.c           # OTA update support
+│   └── fan_control.c          # Fan speed control logic
 └── README_IDF.md              # This file
 ```
 
@@ -117,9 +114,8 @@ gale/
 5. **No External Dependencies**: All code is self-contained (except cJSON for JSON parsing)
 
 ### Changes
-1. **No ArduinoOTA**: The ESP-IDF version includes basic OTA support but not the full ArduinoOTA implementation. You can extend `ota_update.c` to add more features.
-2. **Simplified JSON Parsing**: The web server uses manual JSON parsing for POST requests instead of ArduinoJson library.
-3. **LED Pin**: Uses GPIO 2 (built-in LED on most ESP32 boards) instead of `LED_BUILTIN`.
+1. **Simplified JSON Parsing**: The web server uses manual JSON parsing for POST requests instead of ArduinoJson library.
+2. **LED Pin**: Uses GPIO 2 (built-in LED on most ESP32 boards) instead of `LED_BUILTIN`.
 
 ## How It Works
 
