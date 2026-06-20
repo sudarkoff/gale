@@ -43,6 +43,10 @@ static void apply_speed(uint8_t fanSpeed)
 
 void fan_control_set_speed(uint8_t fanSpeed)
 {
+    if (g_reset_in_progress) {
+        return;
+    }
+
     if (fanSpeed == g_prev_speed) {
         return;
     }
@@ -71,6 +75,11 @@ void fan_control_task(void *pvParameters)
     ESP_LOGI(TAG, "Fan control task started");
 
     while (1) {
+        if (g_reset_in_progress) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+
         // The fan is on, but we're no longer connected to HRM
         // Only auto-turn-off if Matter is not overriding
         if (!g_ble_connected && g_current_speed > 0 && !g_matter_override) {

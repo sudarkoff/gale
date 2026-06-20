@@ -61,6 +61,9 @@ uint32_t g_disconnected_time = 0;
 // Matter override mode (true = Matter controls fan, false = HRM auto mode)
 bool g_matter_override = false;
 
+// Reset state
+bool g_reset_in_progress = false;
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "Starting Gale - Heart Rate Controlled Fan with Matter");
@@ -81,6 +84,9 @@ void app_main(void)
 
     // Initialize LED control (PWM for pulsing)
     led_control_init();
+
+    // Initialize reset button input
+    reset_button_init();
 
     // Set initial fan speed
     g_current_speed = g_config.alwaysOn;
@@ -114,6 +120,9 @@ void app_main(void)
     // Create LED control task
     xTaskCreate(led_control_task, "led_control", 2048, NULL, 5, NULL);
 
+    // Create reset button task
+    xTaskCreate(reset_button_task, "reset_button", 3072, NULL, 5, NULL);
+
     ESP_LOGI(TAG, "Gale initialized successfully with Matter support");
     ESP_LOGI(TAG, "HR Max: %d, Resting: %d", g_config.hrMax, g_config.hrResting);
     ESP_LOGI(TAG, "Zone 1: %.1f, Zone 2: %.1f, Zone 3: %.1f", g_zone1, g_zone2, g_zone3);
@@ -123,6 +132,11 @@ void app_main(void)
     // Main loop - check for commissioning completion and start HRM scan
     bool hrm_scan_started = matter_device_is_commissioned();
     while (1) {
+        if (g_reset_in_progress) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+
         // If just commissioned, start HRM scanning after BLE settles
         if (!hrm_scan_started && matter_device_is_commissioned()) {
             ESP_LOGI(TAG, "Commissioning detected, waiting for BLE to settle...");

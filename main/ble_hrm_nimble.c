@@ -39,6 +39,7 @@ static int ble_hrm_on_dsc_disc(uint16_t conn_handle,
 static void calculate_fan_speed(uint8_t heart_rate)
 {
     if (heart_rate == 0) return;
+    if (g_reset_in_progress) return;
 
     // Skip if Matter is overriding HRM control
     if (g_matter_override) {
@@ -250,6 +251,11 @@ static int ble_hrm_gap_event(struct ble_gap_event *event, void *arg)
 
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
+            if (g_reset_in_progress) {
+                ble_gap_terminate(event->connect.conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+                return 0;
+            }
+
             ESP_LOGI(TAG, "Connected to HRM");
             hrm_conn_handle = event->connect.conn_handle;
             g_ble_connected = true;
@@ -276,8 +282,10 @@ static int ble_hrm_gap_event(struct ble_gap_event *event, void *arg)
             ESP_LOGE(TAG, "Connection failed, status=%d", event->connect.status);
             hrm_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             // Restart scanning after delay
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            ble_hrm_scan_start();
+            if (!g_reset_in_progress) {
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                ble_hrm_scan_start();
+            }
         }
         break;
 
@@ -293,8 +301,10 @@ static int ble_hrm_gap_event(struct ble_gap_event *event, void *arg)
         // Fan will turn off after fanDelay timeout in fan_control_task
 
         // Restart scanning after delay
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        ble_hrm_scan_start();
+        if (!g_reset_in_progress) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            ble_hrm_scan_start();
+        }
         break;
 
     case BLE_GAP_EVENT_NOTIFY_RX:
@@ -323,7 +333,7 @@ static int ble_hrm_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_DISC_COMPLETE:
         ESP_LOGI(TAG, "Discovery complete, reason=%d", event->disc_complete.reason);
         is_scanning = false;
-        if (!g_ble_connected) {
+        if (!g_ble_connected && !g_reset_in_progress) {
             // Restart scanning after delay
             vTaskDelay(pdMS_TO_TICKS(1000));
             ble_hrm_scan_start();
@@ -340,6 +350,10 @@ static int ble_hrm_gap_event(struct ble_gap_event *event, void *arg)
 // Start BLE scanning
 static void ble_hrm_scan_start(void)
 {
+    if (g_reset_in_progress) {
+        return;
+    }
+
     if (is_scanning || g_ble_connected) {
         return;
     }

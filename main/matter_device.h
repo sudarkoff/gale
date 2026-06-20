@@ -17,6 +17,9 @@ void matter_device_update_fan_state(uint8_t speed);
 // Check if device is commissioned
 bool matter_device_is_commissioned(void);
 
+// Trigger a Matter factory reset while preserving app-specific config
+void matter_device_factory_reset(void);
+
 #ifdef __cplusplus
 }
 #endif

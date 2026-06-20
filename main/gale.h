@@ -7,6 +7,8 @@
 // Relay configuration
 #define RELAY_NO
 #define NUM_RELAYS 3
+#define RESET_BUTTON_GPIO 0
+#define RESET_BUTTON_ACTIVE_LEVEL 0
 
 #ifdef RELAY_NO
 #define RELAY_ON 0
@@ -52,6 +54,9 @@ extern uint32_t g_speed_changed_time;
 // Matter override mode (true = Matter controls fan, false = HRM auto mode)
 extern bool g_matter_override;
 
+// Reset state
+extern bool g_reset_in_progress;
+
 // BLE connection state
 extern bool g_ble_connected;
 extern uint32_t g_disconnected_time;
@@ -75,5 +80,8 @@ void led_control_off(void);
 void led_control_on(void);
 void led_control_set_mode(uint8_t mode);  // 0=off, 1/2/3=pulse speeds
 void led_control_task(void *pvParameters);
+
+void reset_button_init(void);
+void reset_button_task(void *pvParameters);
 
 #endif // GALE_H

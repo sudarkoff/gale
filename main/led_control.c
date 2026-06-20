@@ -18,6 +18,7 @@ static const char *TAG = "LED_CONTROL";
 #define PULSE_PERIOD_SPEED1  3000  // 3 seconds - slowest
 #define PULSE_PERIOD_SPEED2  1500  // 1.5 seconds - medium
 #define PULSE_PERIOD_SPEED3  750   // 0.75 seconds - fastest
+#define RESET_BLINK_PERIOD   150   // 150ms on/off while reset is pending
 
 static bool led_initialized = false;
 static uint8_t current_led_mode = 0;  // 0=off, 1/2/3=pulsing at different speeds
@@ -93,6 +94,18 @@ void led_control_task(void *pvParameters)
             }
             last_mode = 0;
             vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+
+        if (mode == 4) {
+            ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_MAX_DUTY);
+            ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
+            vTaskDelay(pdMS_TO_TICKS(RESET_BLINK_PERIOD));
+            ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0);
+            ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
+            vTaskDelay(pdMS_TO_TICKS(RESET_BLINK_PERIOD));
+            last_mode = 4;
+            fading_up = true;
             continue;
         }
 

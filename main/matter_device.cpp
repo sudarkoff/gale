@@ -231,3 +231,20 @@ bool matter_device_is_commissioned(void)
 {
     return chip::Server::GetInstance().GetFabricTable().FabricCount() > 0;
 }
+
+void matter_device_factory_reset(void)
+{
+    if (g_reset_in_progress) {
+        ESP_LOGW(TAG, "Factory reset already in progress");
+        return;
+    }
+
+    g_reset_in_progress = true;
+    g_matter_override = false;
+    g_current_speed = 0;
+    fan_control_set_speed_immediate(0);
+    led_control_set_mode(4);
+
+    ESP_LOGW(TAG, "Triggering Matter factory reset");
+    esp_matter::factory_reset();
+}
